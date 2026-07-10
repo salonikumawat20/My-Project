@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduSimpli — AI Course Content Simplification Agent</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>" />
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+  <!-- Marked.js (Markdown → HTML) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     AUTH PAGE
+════════════════════════════════════════════════════════════ -->
+<div id="authPage" class="auth-overlay {% if page != 'auth' %}d-none{% endif %}">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <span class="brand-icon">🎓</span>
+      <h1 class="brand-name">EduSimpli</h1>
+      <p class="brand-tagline">AI-Powered Course Content Simplification</p>
+      <p class="brand-sub">Powered by IBM Watsonx.ai &amp; IBM Granite</p>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-pills auth-tabs" id="authTabs">
+      <li class="nav-item flex-fill">
+        <button class="nav-link active w-100" data-tab="login">Sign In</button>
+      </li>
+      <li class="nav-item flex-fill">
+        <button class="nav-link w-100" data-tab="register">Register</button>
+      </li>
+    </ul>
+
+    <!-- Login Form -->
+    <form id="loginForm" class="auth-form">
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" id="loginUsername" placeholder="Username" required/>
+        <label for="loginUsername"><i class="bi bi-person me-1"></i>Username</label>
+      </div>
+      <div class="form-floating mb-3 position-relative">
+        <input type="password" class="form-control" id="loginPassword" placeholder="Password" required/>
+        <label for="loginPassword"><i class="bi bi-lock me-1"></i>Password</label>
+      </div>
+      <div id="loginError" class="alert alert-danger d-none py-2"></div>
+      <button type="submit" class="btn btn-primary w-100 btn-auth">
+        <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+      </button>
+      <p class="text-center mt-3 text-muted small">
+        Demo: <strong>demo</strong> / <strong>demo1234</strong>
+      </p>
+    </form>
+
+    <!-- Register Form -->
+    <form id="registerForm" class="auth-form d-none">
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" id="regFullName" placeholder="Full Name"/>
+        <label for="regFullName"><i class="bi bi-person-badge me-1"></i>Full Name</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" id="regUsername" placeholder="Username" required/>
+        <label for="regUsername"><i class="bi bi-at me-1"></i>Username</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input type="email" class="form-control" id="regEmail" placeholder="Email" required/>
+        <label for="regEmail"><i class="bi bi-envelope me-1"></i>Email</label>
+      </div>
+      <div class="form-floating mb-3">
+        <input type="password" class="form-control" id="regPassword" placeholder="Password" required/>
+        <label for="regPassword"><i class="bi bi-shield-lock me-1"></i>Password (6+ chars)</label>
+      </div>
+      <div id="registerError" class="alert alert-danger d-none py-2"></div>
+      <button type="submit" class="btn btn-primary w-100 btn-auth">
+        <i class="bi bi-person-plus me-2"></i>Create Account
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN APP (shown after login)
+════════════════════════════════════════════════════════════ -->
+<div id="mainApp" class="{% if page != 'dashboard' %}d-none{% endif %}">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-brand-icon">🎓</span>
+      <span class="sidebar-brand-text">EduSimpli</span>
+      <button class="btn-icon ms-auto d-lg-none" id="sidebarClose">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">MAIN</div>
+      <a class="sidebar-link active" data-view="dashboard" href="#">
+        <i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span>
+      </a>
+      <a class="sidebar-link" data-view="chat" href="#">
+        <i class="bi bi-chat-dots-fill"></i><span>AI Chat</span>
+        <span class="badge-pill" id="chatBadge"></span>
+      </a>
+      <a class="sidebar-link" data-view="upload" href="#">
+        <i class="bi bi-cloud-arrow-up-fill"></i><span>Upload Content</span>
+      </a>
+      <a class="sidebar-link" data-view="simplify" href="#">
+        <i class="bi bi-magic"></i><span>Simplify</span>
+      </a>
+
+      <div class="sidebar-section-label mt-3">LEARNING TOOLS</div>
+      <a class="sidebar-link" data-view="quiz" href="#">
+        <i class="bi bi-patch-question-fill"></i><span>Quizzes</span>
+      </a>
+      <a class="sidebar-link" data-view="flashcards" href="#">
+        <i class="bi bi-card-list"></i><span>Flashcards</span>
+      </a>
+      <a class="sidebar-link" data-view="glossary" href="#">
+        <i class="bi bi-journal-text"></i><span>Glossary</span>
+      </a>
+      <a class="sidebar-link" data-view="summary" href="#">
+        <i class="bi bi-file-earmark-text-fill"></i><span>Summaries</span>
+      </a>
+
+      <div class="sidebar-section-label mt-3">MY LEARNING</div>
+      <a class="sidebar-link" data-view="documents" href="#">
+        <i class="bi bi-folder2-open"></i><span>My Documents</span>
+      </a>
+      <a class="sidebar-link" data-view="bookmarks" href="#">
+        <i class="bi bi-bookmark-heart-fill"></i><span>Bookmarks</span>
+      </a>
+      <a class="sidebar-link" data-view="progress" href="#">
+        <i class="bi bi-bar-chart-line-fill"></i><span>Progress</span>
+      </a>
+      <a class="sidebar-link" data-view="profile" href="#">
+        <i class="bi bi-person-circle"></i><span>Profile</span>
+      </a>
+    </nav>
+
+    <!-- Level Selector in Sidebar -->
+    <div class="sidebar-level-box">
+      <label class="small text-muted mb-1 d-block"><i class="bi bi-mortarboard me-1"></i>Learning Level</label>
+      <select class="form-select form-select-sm level-select" id="globalLevel">
+        <option value="Beginner">🌱 Beginner</option>
+        <option value="Intermediate">📚 Intermediate</option>
+        <option value="Advanced">🔬 Advanced</option>
+        <option value="Expert">🏆 Expert</option>
+      </select>
+    </div>
+
+    <div class="sidebar-footer">
+      <button class="btn-icon" id="darkModeToggle" title="Toggle dark mode">
+        <i class="bi bi-moon-stars-fill"></i>
+      </button>
+      <span class="sidebar-user-name" id="sidebarUserName">Student</span>
+      <button class="btn-icon text-danger" id="logoutBtn" title="Sign out">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN CONTENT ─────────────────────────────────────────── -->
+  <main class="main-content" id="mainContent">
+
+    <!-- TOP NAV BAR -->
+    <header class="topbar">
+      <button class="btn-icon d-lg-none" id="sidebarToggle">
+        <i class="bi bi-list"></i>
+      </button>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-actions">
+        <div class="topbar-level-badge" id="topbarLevel">🌱 Beginner</div>
+        <div class="topbar-avatar" id="topbarAvatar">S</div>
+      </div>
+    </header>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999">
+      <div id="appToast" class="toast align-items-center border-0" role="alert">
+        <div class="d-flex">
+          <div class="toast-body" id="toastBody">Message</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         VIEW: DASHBOARD
+    ═════════════════════════════════════════ -->
+    <section class="view-panel active" id="view-dashboard">
+      <div class="view-header">
+        <div>
+          <h2 class="view-title">Welcome back, <span id="dashWelcomeName">Student</span>! 👋</h2>
+          <p class="view-subtitle">Your personalized AI-powered learning hub</p>
+        </div>
+        <button class="btn btn-outline-primary btn-sm" id="loadSampleBtn">
+          <i class="bi bi-database-fill-add me-1"></i>Load Sample Data
+        </button>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+          <div class="stat-card" style="--accent:#3b82d4">
+            <div class="stat-icon"><i class="bi bi-file-earmark-richtext-fill"></i></div>
+            <div class="stat-value" id="statDocs">0</div>
+            <div class="stat-label">Documents</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="stat-card" style="--accent:#7c5cd8">
+            <div class="stat-icon"><i class="bi bi-patch-check-fill"></i></div>
+            <div class="stat-value" id="statQuizzes">0</div>
+            <div class="stat-label">Quizzes Taken</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="stat-card" style="--accent:#16a34a">
+            <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="stat-value" id="statScore">0%</div>
+            <div class="stat-label">Avg Quiz Score</div>
+          </div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="stat-card" style="--accent:#ea580c">
+            <div class="stat-icon"><i class="bi bi-mortarboard-fill"></i></div>
+            <div class="stat-value" id="statLevel">—</div>
+            <div class="stat-label">Learning Level</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <h5 class="section-title mb-3">⚡ Quick Actions</h5>
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+          <div class="quick-card" data-view="upload">
+            <div class="quick-icon" style="background:#dbeafe">📤</div>
+            <div class="quick-label">Upload Document</div>
+            <div class="quick-sub">PDF, DOCX, TXT</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="quick-card" data-view="simplify">
+            <div class="quick-icon" style="background:#ede9fe">✨</div>
+            <div class="quick-label">Simplify Content</div>
+            <div class="quick-sub">AI-powered breakdown</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="quick-card" data-view="quiz">
+            <div class="quick-icon" style="background:#dcfce7">🧪</div>
+            <div class="quick-label">Generate Quiz</div>
+            <div class="quick-sub">Test your knowledge</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="quick-card" data-view="chat">
+            <div class="quick-icon" style="background:#ffedd5">💬</div>
+            <div class="quick-label">Ask EduSimpli</div>
+            <div class="quick-sub">Chat with AI tutor</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Documents + AI Recommendations side by side -->
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <i class="bi bi-clock-history me-2"></i>Recent Documents
+            </div>
+            <div id="recentDocsList" class="doc-list">
+              <p class="text-muted text-center py-3 small">No documents yet. Upload one to get started!</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <i class="bi bi-lightbulb-fill me-2"></i>AI Recommendations
+              <button class="btn btn-xs btn-outline-primary ms-auto" id="refreshRecsBtn">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
+            <div id="recommendationsList" class="prose-area small">
+              <p class="text-muted text-center py-3">Click refresh to get personalized suggestions.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: CHAT
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-chat">
+      <div class="view-header">
+        <div>
+          <h2 class="view-title">💬 AI Tutor Chat</h2>
+          <p class="view-subtitle">Ask EduSimpli anything about your uploaded content</p>
+        </div>
+        <select class="form-select form-select-sm w-auto" id="chatDocSelect">
+          <option value="">No document (general chat)</option>
+        </select>
+      </div>
+
+      <div class="chat-layout">
+        <!-- Sessions sidebar -->
+        <div class="chat-sessions-panel">
+          <button class="btn btn-primary btn-sm w-100 mb-3" id="newChatBtn">
+            <i class="bi bi-plus-lg me-1"></i>New Chat
+          </button>
+          <div id="sessionsList" class="sessions-list"></div>
+        </div>
+        <!-- Chat area -->
+        <div class="chat-main">
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-welcome">
+              <div class="chat-welcome-icon">🤖</div>
+              <h4>Hi! I'm EduSimpli</h4>
+              <p>Upload a document and ask me anything! I can explain concepts, answer questions, and simplify complex material based on your learning level.</p>
+            </div>
+          </div>
+          <div class="chat-input-area">
+            <div class="chat-input-row">
+              <textarea
+                id="chatInput"
+                class="form-control chat-textarea"
+                rows="2"
+                placeholder="Ask a question about your content... (Enter to send, Shift+Enter for new line)"
+              ></textarea>
+              <button class="btn btn-primary chat-send-btn" id="chatSendBtn">
+                <i class="bi bi-send-fill"></i>
+              </button>
+            </div>
+            <div class="chat-hints">
+              <span class="chat-hint" data-text="Explain this in simple terms">💡 Simplify</span>
+              <span class="chat-hint" data-text="Give me a real-world example">🌍 Example</span>
+              <span class="chat-hint" data-text="What are the key takeaways?">🔑 Key Points</span>
+              <span class="chat-hint" data-text="Create an analogy for this">🔄 Analogy</span>
+              <span class="chat-hint" data-text="What are the most important terms?">📖 Terms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: UPLOAD
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-upload">
+      <div class="view-header">
+        <h2 class="view-title">📤 Upload Educational Content</h2>
+        <p class="view-subtitle">Support for PDF, DOCX, and TXT files up to 16 MB</p>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="upload-dropzone" id="dropzone">
+            <div class="upload-icon">☁️</div>
+            <h5>Drag &amp; drop your file here</h5>
+            <p class="text-muted">or click to browse</p>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.txt" class="d-none"/>
+            <button class="btn btn-primary mt-2" onclick="document.getElementById('fileInput').click()">
+              <i class="bi bi-folder2-open me-1"></i>Browse Files
+            </button>
+            <div class="upload-types mt-3">
+              <span class="type-badge">PDF</span>
+              <span class="type-badge">DOCX</span>
+              <span class="type-badge">TXT</span>
+            </div>
+          </div>
+          <div id="uploadProgress" class="mt-3 d-none">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div>
+            </div>
+            <p class="text-center small text-muted mt-1">Uploading & extracting text…</p>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card-panel h-100">
+            <div class="card-panel-header"><i class="bi bi-info-circle-fill me-2"></i>Upload Tips</div>
+            <ul class="tip-list">
+              <li>📄 <strong>PDF:</strong> Faculty notes, textbook chapters, research papers</li>
+              <li>📝 <strong>DOCX:</strong> Lecture notes, study guides, assignments</li>
+              <li>📋 <strong>TXT:</strong> Plain text notes, code explanations</li>
+              <li>🔍 Make sure the file has selectable text (not scanned images)</li>
+              <li>📏 Keep files under 16 MB for best performance</li>
+              <li>🎯 Focused single-topic documents work best</li>
+            </ul>
+            <div id="uploadSuccess" class="alert alert-success d-none mt-3">
+              <i class="bi bi-check-circle-fill me-2"></i>
+              <span id="uploadSuccessMsg">File uploaded successfully!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: SIMPLIFY
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-simplify">
+      <div class="view-header">
+        <h2 class="view-title">✨ Content Simplification</h2>
+        <p class="view-subtitle">AI-powered explanation tailored to your learning level</p>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-lg-5">
+          <div class="card-panel">
+            <div class="card-panel-header"><i class="bi bi-sliders2 me-2"></i>Simplification Settings</div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Source</label>
+              <select class="form-select" id="simplifyDocSelect">
+                <option value="">── Paste custom text below ──</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Or paste content</label>
+              <textarea class="form-control" id="simplifyText" rows="6" placeholder="Paste your educational content here…"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Topic Focus (optional)</label>
+              <input type="text" class="form-control" id="simplifyTopic" placeholder="e.g. Neural Networks, Photosynthesis…"/>
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-semibold">Explanation Level</label>
+              <div class="level-pills" id="simplifyLevel">
+                <button class="level-pill active" data-level="Beginner">🌱 Beginner</button>
+                <button class="level-pill" data-level="Intermediate">📚 Intermediate</button>
+                <button class="level-pill" data-level="Advanced">🔬 Advanced</button>
+                <button class="level-pill" data-level="Expert">🏆 Expert</button>
+              </div>
+            </div>
+            <button class="btn btn-primary w-100" id="simplifyBtn">
+              <i class="bi bi-magic me-2"></i>Simplify with AI
+            </button>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="card-panel h-100">
+            <div class="card-panel-header">
+              <i class="bi bi-stars me-2"></i>AI Explanation
+              <button class="btn btn-xs btn-outline-secondary ms-auto" id="copySimplifyBtn" title="Copy to clipboard">
+                <i class="bi bi-clipboard"></i>
+              </button>
+            </div>
+            <div id="simplifyResult" class="prose-area">
+              <div class="empty-state">
+                <div class="empty-icon">✨</div>
+                <p>Your simplified explanation will appear here.</p>
+              </div>
+            </div>
+            <div id="simplifyLoading" class="loading-state d-none">
+              <div class="spinner-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <p>EduSimpli is thinking…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: QUIZ
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-quiz">
+      <div class="view-header">
+        <h2 class="view-title">🧪 Quiz Generator</h2>
+        <p class="view-subtitle">Test your understanding with AI-generated questions</p>
+      </div>
+
+      <div id="quizSetup">
+        <div class="row g-3 mb-4">
+          <div class="col-md-5">
+            <label class="form-label fw-semibold">Select Document</label>
+            <select class="form-select" id="quizDocSelect">
+              <option value="">── Choose a document ──</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Number of Questions</label>
+            <select class="form-select" id="quizNumQuestions">
+              <option value="3">3 Questions</option>
+              <option value="5" selected>5 Questions</option>
+              <option value="7">7 Questions</option>
+              <option value="10">10 Questions</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Level</label>
+            <select class="form-select" id="quizLevel">
+              <option value="Beginner">🌱 Beginner</option>
+              <option value="Intermediate">📚 Intermediate</option>
+              <option value="Advanced">🔬 Advanced</option>
+              <option value="Expert">🏆 Expert</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="generateQuizBtn">
+          <i class="bi bi-patch-question-fill me-2"></i>Generate Quiz
+        </button>
+      </div>
+
+      <div id="quizLoading" class="loading-state my-4 d-none">
+        <div class="spinner-dots"><span></span><span></span><span></span></div>
+        <p>Generating quiz questions…</p>
+      </div>
+
+      <div id="quizContainer" class="mt-4 d-none"></div>
+
+      <div id="quizResult" class="d-none">
+        <div class="score-card">
+          <div class="score-circle">
+            <span id="scorePercent">0%</span>
+          </div>
+          <h4 id="scoreMessage"></h4>
+          <button class="btn btn-primary mt-3" id="retakeQuizBtn">
+            <i class="bi bi-arrow-clockwise me-1"></i>Retake Quiz
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: FLASHCARDS
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-flashcards">
+      <div class="view-header">
+        <h2 class="view-title">🃏 Flashcards</h2>
+        <p class="view-subtitle">Study key terms with AI-generated flashcards</p>
+      </div>
+      <div class="row align-items-end g-3 mb-4">
+        <div class="col-md-5">
+          <label class="form-label fw-semibold">Select Document</label>
+          <select class="form-select" id="flashcardDocSelect">
+            <option value="">── Choose a document ──</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <button class="btn btn-primary" id="generateFlashcardsBtn">
+            <i class="bi bi-card-list me-2"></i>Generate Flashcards
+          </button>
+        </div>
+      </div>
+      <div id="flashcardsLoading" class="loading-state d-none">
+        <div class="spinner-dots"><span></span><span></span><span></span></div>
+        <p>Generating flashcards…</p>
+      </div>
+      <div id="flashcardsGrid" class="flashcards-grid"></div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: GLOSSARY
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-glossary">
+      <div class="view-header">
+        <h2 class="view-title">📖 Glossary Generator</h2>
+        <p class="view-subtitle">AI-extracted definitions for key technical terms</p>
+      </div>
+      <div class="row align-items-end g-3 mb-4">
+        <div class="col-md-5">
+          <label class="form-label fw-semibold">Select Document</label>
+          <select class="form-select" id="glossaryDocSelect">
+            <option value="">── Choose a document ──</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <button class="btn btn-primary" id="generateGlossaryBtn">
+            <i class="bi bi-journal-text me-2"></i>Generate Glossary
+          </button>
+        </div>
+      </div>
+      <div id="glossaryLoading" class="loading-state d-none">
+        <div class="spinner-dots"><span></span><span></span><span></span></div>
+        <p>Extracting terms…</p>
+      </div>
+      <div id="glossaryContainer" class="glossary-grid"></div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: SUMMARIES
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-summary">
+      <div class="view-header">
+        <h2 class="view-title">📋 Topic Summaries</h2>
+        <p class="view-subtitle">AI-generated structured overviews of your content</p>
+      </div>
+      <div class="row align-items-end g-3 mb-4">
+        <div class="col-md-5">
+          <label class="form-label fw-semibold">Select Document</label>
+          <select class="form-select" id="summaryDocSelect">
+            <option value="">── Choose a document ──</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <button class="btn btn-primary" id="generateSummaryBtn">
+            <i class="bi bi-file-earmark-text-fill me-2"></i>Generate Summary
+          </button>
+        </div>
+      </div>
+      <div id="summaryLoading" class="loading-state d-none">
+        <div class="spinner-dots"><span></span><span></span><span></span></div>
+        <p>Generating summary…</p>
+      </div>
+      <div class="card-panel">
+        <div id="summaryResult" class="prose-area">
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <p>Select a document and generate a structured summary.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: DOCUMENTS
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-documents">
+      <div class="view-header">
+        <h2 class="view-title">📁 My Documents</h2>
+        <p class="view-subtitle">Manage your uploaded educational materials</p>
+        <button class="btn btn-primary btn-sm ms-auto" data-view="upload">
+          <i class="bi bi-plus-lg me-1"></i>Upload New
+        </button>
+      </div>
+      <div id="documentsGrid" class="documents-grid"></div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: BOOKMARKS
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-bookmarks">
+      <div class="view-header">
+        <h2 class="view-title">🔖 Bookmarks</h2>
+        <p class="view-subtitle">Your saved educational resources</p>
+      </div>
+      <div id="bookmarksList" class="documents-grid"></div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: PROGRESS
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-progress">
+      <div class="view-header">
+        <h2 class="view-title">📊 Study Progress</h2>
+        <p class="view-subtitle">Track your learning journey</p>
+      </div>
+      <div class="row g-3 mb-4" id="progressStats"></div>
+      <div class="card-panel">
+        <div class="card-panel-header"><i class="bi bi-list-check me-2"></i>Topic Progress</div>
+        <div id="progressList"></div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════
+         VIEW: PROFILE
+    ═════════════════════════════════════════ -->
+    <section class="view-panel" id="view-profile">
+      <div class="view-header">
+        <h2 class="view-title">👤 Student Profile</h2>
+        <p class="view-subtitle">Customize your learning experience</p>
+      </div>
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <div class="card-panel text-center">
+            <div class="profile-avatar-large" id="profileAvatarLarge">S</div>
+            <h4 class="mt-3 mb-1" id="profileFullName">Student</h4>
+            <p class="text-muted" id="profileUsername">@username</p>
+            <div class="level-badge-large" id="profileLevelBadge">🌱 Beginner</div>
+            <div class="mt-3">
+              <label class="small text-muted d-block mb-2">Avatar Color</label>
+              <input type="color" id="avatarColorPicker" class="form-control form-control-color mx-auto" style="width:48px;height:48px" value="#3b82d4"/>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-8">
+          <div class="card-panel">
+            <div class="card-panel-header"><i class="bi bi-pencil-fill me-2"></i>Edit Profile</div>
+            <form id="profileForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Full Name</label>
+                  <input type="text" class="form-control" id="profileFullNameInput" placeholder="Your full name"/>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Email</label>
+                  <input type="email" class="form-control" id="profileEmailInput" placeholder="Email" disabled/>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Learning Level</label>
+                  <select class="form-select" id="profileLevelSelect">
+                    <option value="Beginner">🌱 Beginner</option>
+                    <option value="Intermediate">📚 Intermediate</option>
+                    <option value="Advanced">🔬 Advanced</option>
+                    <option value="Expert">🏆 Expert</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold">Preferred Domain</label>
+                  <select class="form-select" id="profileDomainSelect">
+                    <option>General Education</option>
+                    <option>Computer Science</option>
+                    <option>Mathematics</option>
+                    <option>Physics</option>
+                    <option>Biology</option>
+                    <option>Chemistry</option>
+                    <option>Medicine</option>
+                    <option>Engineering</option>
+                    <option>Business</option>
+                    <option>Economics</option>
+                    <option>History</option>
+                    <option>Law</option>
+                    <option>Literature</option>
+                    <option>Psychology</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="profileDarkMode"/>
+                    <label class="form-check-label" for="profileDarkMode">Dark Mode</label>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save-fill me-2"></i>Save Profile
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- App JS -->
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
